@@ -11,11 +11,11 @@
 <span class="token keyword">var</span> url <span class="token operator">=</span> <span class="token function">require<span class="token punctuation">(</span></span><span class="token string">&#x27;url&#x27;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token keyword">var</span> util <span class="token operator">=</span> <span class="token function">require<span class="token punctuation">(</span></span><span class="token string">&#x27;util&#x27;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-<span class="token keyword">var</span> Auth <span class="token operator">=</span> <span class="token function">require<span class="token punctuation">(</span></span><span class="token string">&#x27;bce-sdk-js&#x27;</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Auth<span class="token punctuation">;</span>
+<span class="token keyword">var</span> sdk <span class="token operator">=</span> <span class="token function">require<span class="token punctuation">(</span></span><span class="token string">&#x27;bce-sdk-js&#x27;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 
 <span class="token keyword">var</span> kCredentials <span class="token operator">=</span> <span class="token punctuation">{</span>
-    ak<span class="token punctuation">:</span> <span class="token string">&#x27;&lt;你的AK&gt;&#x27;</span>
-    sk<span class="token punctuation">:</span> <span class="token string">&#x27;&lt;你的SK&gt;&#x27;</span>
+    ak<span class="token punctuation">:</span> <span class="token string">&#x27;&lt;your ak&gt;&#x27;</span><span class="token punctuation">,</span>
+    sk<span class="token punctuation">:</span> <span class="token string">&#x27;&lt;your sk&gt;&#x27;</span>
 <span class="token punctuation">}</span><span class="token punctuation">;</span>
 
 <span class="token keyword">function</span> <span class="token function">safeParse<span class="token punctuation">(</span></span>text<span class="token punctuation">)</span> <span class="token punctuation">{</span>
@@ -27,66 +27,88 @@
     <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 
+<span class="token keyword">function</span> <span class="token function">buildStsResponse<span class="token punctuation">(</span></span>sts<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> stsClient <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">sdk<span class="token punctuation">.</span>STS</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+        credentials<span class="token punctuation">:</span> kCredentials<span class="token punctuation">,</span>
+        region<span class="token punctuation">:</span> <span class="token string">&#x27;bj&#x27;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> stsClient<span class="token punctuation">.</span><span class="token function">getSessionToken<span class="token punctuation">(</span></span><span class="token number">60</span> <span class="token operator">*</span> <span class="token number">60</span> <span class="token operator">*</span> <span class="token number">24</span><span class="token punctuation">,</span> <span class="token function">safeParse<span class="token punctuation">(</span></span>sts<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">then<span class="token punctuation">(</span></span><span class="token keyword">function</span> <span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">var</span> body <span class="token operator">=</span> response<span class="token punctuation">.</span>body<span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token punctuation">{</span>
+            AccessKeyId<span class="token punctuation">:</span> body<span class="token punctuation">.</span>accessKeyId<span class="token punctuation">,</span>
+            SecretAccessKey<span class="token punctuation">:</span> body<span class="token punctuation">.</span>secretAccessKey<span class="token punctuation">,</span>
+            SessionToken<span class="token punctuation">:</span> body<span class="token punctuation">.</span>sessionToken<span class="token punctuation">,</span>
+            Expiration<span class="token punctuation">:</span> body<span class="token punctuation">.</span>expiration
+        <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">buildPolicyResponse<span class="token punctuation">(</span></span>policy<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> auth <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">sdk<span class="token punctuation">.</span>Auth</span><span class="token punctuation">(</span>kCredentials<span class="token punctuation">.</span>ak<span class="token punctuation">,</span> kCredentials<span class="token punctuation">.</span>sk<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    policy <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Buffer</span><span class="token punctuation">(</span>policy<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString<span class="token punctuation">(</span></span><span class="token string">&#x27;base64&#x27;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    signature <span class="token operator">=</span> auth<span class="token punctuation">.</span><span class="token function">hash<span class="token punctuation">(</span></span>policy<span class="token punctuation">,</span> kCredentials<span class="token punctuation">.</span>sk<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">return</span> sdk<span class="token punctuation">.</span>Q<span class="token punctuation">.</span><span class="token function">resolve<span class="token punctuation">(</span></span><span class="token punctuation">{</span>
+        accessKey<span class="token punctuation">:</span> kCredentials<span class="token punctuation">.</span>ak<span class="token punctuation">,</span>
+        policy<span class="token punctuation">:</span> policy<span class="token punctuation">,</span>
+        signature<span class="token punctuation">:</span> signature
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">buildNormalResponse<span class="token punctuation">(</span></span>query<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token punctuation">(</span>query<span class="token punctuation">.</span>httpMethod &amp;&amp; query<span class="token punctuation">.</span>path &amp;&amp; query<span class="token punctuation">.</span>params &amp;&amp; query<span class="token punctuation">.</span>headers<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> sdk<span class="token punctuation">.</span>Q<span class="token punctuation">.</span><span class="token function">resolve<span class="token punctuation">(</span></span><span class="token punctuation">{</span>statusCode<span class="token punctuation">:</span> <span class="token number">403</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>query<span class="token punctuation">.</span>httpMethod <span class="token operator">!</span><span class="token operator">==</span> <span class="token string">&#x27;PUT&#x27;</span> &amp;&amp; query<span class="token punctuation">.</span>httpMethod <span class="token operator">!</span><span class="token operator">==</span> <span class="token string">&#x27;POST&#x27;</span> &amp;&amp; query<span class="token punctuation">.</span>httpMethod <span class="token operator">!</span><span class="token operator">==</span> <span class="token string">&#x27;GET&#x27;</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+       <span class="token comment" spellcheck="true"> // 只允许 PUT/POST/GET Method
+</span>        <span class="token keyword">return</span> sdk<span class="token punctuation">.</span>Q<span class="token punctuation">.</span><span class="token function">resolve<span class="token punctuation">(</span></span><span class="token punctuation">{</span>statusCode<span class="token punctuation">:</span> <span class="token number">403</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">var</span> httpMethod <span class="token operator">=</span> query<span class="token punctuation">.</span>httpMethod<span class="token punctuation">;</span>
+    <span class="token keyword">var</span> path <span class="token operator">=</span> query<span class="token punctuation">.</span>path<span class="token punctuation">;</span>
+    <span class="token keyword">var</span> params <span class="token operator">=</span> <span class="token function">safeParse<span class="token punctuation">(</span></span>query<span class="token punctuation">.</span>params<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> headers <span class="token operator">=</span> <span class="token function">safeParse<span class="token punctuation">(</span></span>query<span class="token punctuation">.</span>headers<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">var</span> auth <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">sdk<span class="token punctuation">.</span>Auth</span><span class="token punctuation">(</span>kCredentials<span class="token punctuation">.</span>ak<span class="token punctuation">,</span> kCredentials<span class="token punctuation">.</span>sk<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    signature <span class="token operator">=</span> auth<span class="token punctuation">.</span><span class="token function">generateAuthorization<span class="token punctuation">(</span></span>httpMethod<span class="token punctuation">,</span> path<span class="token punctuation">,</span> params<span class="token punctuation">,</span> headers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">return</span> sdk<span class="token punctuation">.</span>Q<span class="token punctuation">.</span><span class="token function">resolve<span class="token punctuation">(</span></span><span class="token punctuation">{</span>
+        statusCode<span class="token punctuation">:</span> <span class="token number">200</span><span class="token punctuation">,</span>
+        signature<span class="token punctuation">:</span> signature<span class="token punctuation">,</span>
+        xbceDate<span class="token punctuation">:</span> <span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toISOString<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">replace<span class="token punctuation">(</span></span><span class="token regex">/\.\d+Z$/</span><span class="token punctuation">,</span> <span class="token string">&#x27;Z&#x27;</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
 http<span class="token punctuation">.</span><span class="token function">createServer<span class="token punctuation">(</span></span><span class="token keyword">function</span> <span class="token punctuation">(</span>req<span class="token punctuation">,</span> res<span class="token punctuation">)</span> <span class="token punctuation">{</span>
     console<span class="token punctuation">.</span><span class="token function">log<span class="token punctuation">(</span></span>req<span class="token punctuation">.</span>url<span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-   <span class="token comment" spellcheck="true"> // query: { httpMethod: &#x27;$0&#x27;, path: &#x27;$1&#x27;, params: &#x27;$2&#x27;, headers: &#x27;$3&#x27; },
-</span>    <span class="token keyword">var</span> query <span class="token operator">=</span> url<span class="token punctuation">.</span><span class="token function">parse<span class="token punctuation">(</span></span>req<span class="token punctuation">.</span>url<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">.</span>query<span class="token punctuation">;</span>
+    <span class="token keyword">var</span> query <span class="token operator">=</span> url<span class="token punctuation">.</span><span class="token function">parse<span class="token punctuation">(</span></span>req<span class="token punctuation">.</span>url<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">.</span>query<span class="token punctuation">;</span>
 
-    <span class="token keyword">var</span> statusCode <span class="token operator">=</span> <span class="token number">200</span><span class="token punctuation">;</span>
-    <span class="token keyword">var</span> policy <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
-    <span class="token keyword">var</span> signature <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
-
-    <span class="token keyword">if</span> <span class="token punctuation">(</span>query<span class="token punctuation">.</span>policy<span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token keyword">var</span> auth <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Auth</span><span class="token punctuation">(</span>kCredentials<span class="token punctuation">.</span>ak<span class="token punctuation">,</span> kCredentials<span class="token punctuation">.</span>sk<span class="token punctuation">)</span><span class="token punctuation">;</span>
-        policy <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Buffer</span><span class="token punctuation">(</span>query<span class="token punctuation">.</span>policy<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString<span class="token punctuation">(</span></span><span class="token string">&#x27;base64&#x27;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-        signature <span class="token operator">=</span> auth<span class="token punctuation">.</span><span class="token function">hash<span class="token punctuation">(</span></span>policy<span class="token punctuation">,</span> kCredentials<span class="token punctuation">.</span>sk<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> promise <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>query<span class="token punctuation">.</span>sts<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        promise <span class="token operator">=</span> <span class="token function">buildStsResponse<span class="token punctuation">(</span></span>query<span class="token punctuation">.</span>sts<span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
-    <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>query<span class="token punctuation">.</span>httpMethod &amp;&amp; query<span class="token punctuation">.</span>path &amp;&amp; query<span class="token punctuation">.</span>params &amp;&amp; query<span class="token punctuation">.</span>headers<span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token keyword">if</span> <span class="token punctuation">(</span>query<span class="token punctuation">.</span>httpMethod <span class="token operator">!</span><span class="token operator">==</span> <span class="token string">&#x27;PUT&#x27;</span> &amp;&amp; query<span class="token punctuation">.</span>httpMethod <span class="token operator">!</span><span class="token operator">==</span> <span class="token string">&#x27;POST&#x27;</span> &amp;&amp; query<span class="token punctuation">.</span>httpMethod <span class="token operator">!</span><span class="token operator">==</span> <span class="token string">&#x27;GET&#x27;</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-           <span class="token comment" spellcheck="true"> // 只允许 PUT/POST/GET Method
-</span>            statusCode <span class="token operator">=</span> <span class="token number">403</span><span class="token punctuation">;</span>
-        <span class="token punctuation">}</span>
-        <span class="token keyword">else</span> <span class="token punctuation">{</span>
-            <span class="token keyword">var</span> httpMethod <span class="token operator">=</span> query<span class="token punctuation">.</span>httpMethod<span class="token punctuation">;</span>
-            <span class="token keyword">var</span> path <span class="token operator">=</span> query<span class="token punctuation">.</span>path<span class="token punctuation">;</span>
-            <span class="token keyword">var</span> params <span class="token operator">=</span> <span class="token function">safeParse<span class="token punctuation">(</span></span>query<span class="token punctuation">.</span>params<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
-            <span class="token keyword">var</span> headers <span class="token operator">=</span> <span class="token function">safeParse<span class="token punctuation">(</span></span>query<span class="token punctuation">.</span>headers<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
-
-            <span class="token keyword">var</span> auth <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Auth</span><span class="token punctuation">(</span>kCredentials<span class="token punctuation">.</span>ak<span class="token punctuation">,</span> kCredentials<span class="token punctuation">.</span>sk<span class="token punctuation">)</span><span class="token punctuation">;</span>
-            signature <span class="token operator">=</span> auth<span class="token punctuation">.</span><span class="token function">generateAuthorization<span class="token punctuation">(</span></span>httpMethod<span class="token punctuation">,</span> path<span class="token punctuation">,</span> params<span class="token punctuation">,</span> headers<span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token punctuation">}</span>
+    <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>query<span class="token punctuation">.</span>policy<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        promise <span class="token operator">=</span> <span class="token function">buildPolicyResponse<span class="token punctuation">(</span></span>query<span class="token punctuation">.</span>policy<span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
     <span class="token keyword">else</span> <span class="token punctuation">{</span>
-        statusCode <span class="token operator">=</span> <span class="token number">403</span><span class="token punctuation">;</span>
+        promise <span class="token operator">=</span> <span class="token function">buildNormalResponse<span class="token punctuation">(</span></span>query<span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
 
-   <span class="token comment" spellcheck="true"> // 最多10s的延迟
-</span>    <span class="token keyword">var</span> delay <span class="token operator">=</span> Math<span class="token punctuation">.</span><span class="token function">min<span class="token punctuation">(</span></span>query<span class="token punctuation">.</span>delay <span class="token operator">||</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token function">setTimeout<span class="token punctuation">(</span></span><span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token keyword">var</span> payload <span class="token operator">=</span> query<span class="token punctuation">.</span>policy
-                      <span class="token operator">?</span> <span class="token punctuation">{</span>
-                          accessKey<span class="token punctuation">:</span> kCredentials<span class="token punctuation">.</span>ak<span class="token punctuation">,</span>
-                          policy<span class="token punctuation">:</span> policy<span class="token punctuation">,</span>
-                          signature<span class="token punctuation">:</span> signature
-                      <span class="token punctuation">}</span>
-                      <span class="token punctuation">:</span> <span class="token punctuation">{</span>
-                          statusCode<span class="token punctuation">:</span> statusCode<span class="token punctuation">,</span>
-                          signature<span class="token punctuation">:</span> signature<span class="token punctuation">,</span>
-                          xbceDate<span class="token punctuation">:</span> <span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toISOString<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">replace<span class="token punctuation">(</span></span><span class="token regex">/\.\d+Z$/</span><span class="token punctuation">,</span> <span class="token string">&#x27;Z&#x27;</span><span class="token punctuation">)</span>
-                      <span class="token punctuation">}</span><span class="token punctuation">;</span>
-
-        res<span class="token punctuation">.</span><span class="token function">writeHead<span class="token punctuation">(</span></span>statusCode<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    promise<span class="token punctuation">.</span><span class="token function">then<span class="token punctuation">(</span></span><span class="token keyword">function</span> <span class="token punctuation">(</span>payload<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        res<span class="token punctuation">.</span><span class="token function">writeHead<span class="token punctuation">(</span></span><span class="token number">200</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
             <span class="token string">&#x27;Content-Type&#x27;</span><span class="token punctuation">:</span> <span class="token string">&#x27;text/javascript; charset=utf-8&#x27;</span><span class="token punctuation">,</span>
             <span class="token string">&#x27;Access-Control-Allow-Origin&#x27;</span><span class="token punctuation">:</span> <span class="token string">&#x27;*&#x27;</span>
         <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
         <span class="token keyword">if</span> <span class="token punctuation">(</span>query<span class="token punctuation">.</span>callback<span class="token punctuation">)</span> <span class="token punctuation">{</span>
             res<span class="token punctuation">.</span><span class="token function">end<span class="token punctuation">(</span></span>util<span class="token punctuation">.</span><span class="token function">format<span class="token punctuation">(</span></span><span class="token string">&#x27;%s(%s)&#x27;</span><span class="token punctuation">,</span> query<span class="token punctuation">.</span>callback<span class="token punctuation">,</span> JSON<span class="token punctuation">.</span><span class="token function">stringify<span class="token punctuation">(</span></span>payload<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token punctuation">}</span>
         <span class="token keyword">else</span> <span class="token punctuation">{</span>
             res<span class="token punctuation">.</span><span class="token function">end<span class="token punctuation">(</span></span>JSON<span class="token punctuation">.</span><span class="token function">stringify<span class="token punctuation">(</span></span>payload<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token punctuation">}</span>
-    <span class="token punctuation">}</span><span class="token punctuation">,</span> delay <span class="token operator">*</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">listen<span class="token punctuation">(</span></span><span class="token number">1337</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 console<span class="token punctuation">.</span><span class="token function">log<span class="token punctuation">(</span></span><span class="token string">&#x27;Server running at http://0.0.0.0:1337/&#x27;</span><span class="token punctuation">)</span><span class="token punctuation">;</span></pre><h4><a class="anchor" name="c#%20%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0"></a>C# 后端实现 <a class="hash-link" href="#c#%20%E5%90%8E%E7%AB%AF%E5%AE%9E%E7%8E%B0">#</a></h4><pre class="prism language-javascript">
 using System<span class="token punctuation">;</span>
@@ -102,30 +124,27 @@ using Newtonsoft<span class="token punctuation">.</span>Json<span class="token p
 using BaiduBce<span class="token punctuation">.</span>Util<span class="token punctuation">;</span>
 using System<span class="token punctuation">.</span>Text<span class="token punctuation">;</span>
 using System<span class="token punctuation">.</span>Security<span class="token punctuation">.</span>Cryptography<span class="token punctuation">;</span>
+using BaiduBce<span class="token punctuation">.</span>Services<span class="token punctuation">.</span>Sts<span class="token punctuation">;</span>
+using BaiduBce<span class="token punctuation">.</span>Services<span class="token punctuation">.</span>Sts<span class="token punctuation">.</span>Model<span class="token punctuation">;</span>
 
 namespace BaiduCloudEngine<span class="token punctuation">.</span>Controllers
 <span class="token punctuation">{</span>
   class <span class="token class-name">SignatureResult</span>
   <span class="token punctuation">{</span>
     public int statusCode <span class="token punctuation">{</span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
-
     public string signature <span class="token punctuation">{</span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
-
     public string xbceDate <span class="token punctuation">{</span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
   <span class="token punctuation">}</span>
 
   class <span class="token class-name">PolicySignatureResult</span>
   <span class="token punctuation">{</span>
     public string policy <span class="token punctuation">{</span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
-
     public string signature <span class="token punctuation">{</span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
-
     public string accessKey <span class="token punctuation">{</span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
   <span class="token punctuation">}</span>
 
   public class <span class="token class-name">HomeController</span> <span class="token punctuation">:</span> Controller
   <span class="token punctuation">{</span>
-
     private static string EncodeHex <span class="token punctuation">(</span>byte<span class="token punctuation">[</span><span class="token punctuation">]</span> data<span class="token punctuation">)</span>
     <span class="token punctuation">{</span>
       <span class="token keyword">var</span> sb <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">StringBuilder</span> <span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
@@ -135,16 +154,26 @@ namespace BaiduCloudEngine<span class="token punctuation">.</span>Controllers
       <span class="token keyword">return</span> sb<span class="token punctuation">.</span>ToString <span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
 
-   <span class="token comment" spellcheck="true"> // http://127.0.0.1:8080/?httpMethod=PUT&amp;path=%2Fv1%2Fbce-javascript-sdk-demo-test%2Fbce.png&amp;delay=0&amp;queries=%7B%7D&amp;headers=%7B%22User-Agent%22%3A%22Mozilla%2F5.0+(Macintosh%3B+Intel+Mac+OS+X+10_11_2)+AppleWebKit%2F537.36+(KHTML%2C+like+Gecko)+Chrome%2F48.0.2564.97+Safari%2F537.36%22%2C%22x-bce-date%22%3A%222016-02-22T08%3A03%3A13Z%22%2C%22Connection%22%3A%22close%22%2C%22Content-Type%22%3A%22image%2Fpng%3B+charset%3DUTF-8%22%2C%22Host%22%3A%22bos.bj.baidubce.com%22%2C%22Content-Length%22%3A4800%7D
-</span>    public string Index <span class="token punctuation">(</span>string httpMethod<span class="token punctuation">,</span> string path<span class="token punctuation">,</span> string queries<span class="token punctuation">,</span> string headers<span class="token punctuation">,</span> string policy<span class="token punctuation">,</span> string callback<span class="token punctuation">)</span>
+    public string Index <span class="token punctuation">(</span>string httpMethod<span class="token punctuation">,</span> string path<span class="token punctuation">,</span> string queries<span class="token punctuation">,</span> string headers<span class="token punctuation">,</span> string policy<span class="token punctuation">,</span> string sts<span class="token punctuation">,</span> string callback<span class="token punctuation">)</span>
     <span class="token punctuation">{</span>
-      BceClientConfiguration config <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">BceClientConfiguration</span> <span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-      string ak <span class="token operator">=</span> <span class="token string">&quot;b92ea4a39f3645c8ae5f64ba5fc2a357&quot;</span><span class="token punctuation">;</span>
-      string sk <span class="token operator">=</span> <span class="token string">&quot;a4ce012968714958a21bb90dc180de17&quot;</span><span class="token punctuation">;</span>
-      config<span class="token punctuation">.</span>Credentials <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">DefaultBceCredentials</span> <span class="token punctuation">(</span>ak<span class="token punctuation">,</span> sk<span class="token punctuation">)</span><span class="token punctuation">;</span>
-      BceV1Signer bceV1Signer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">BceV1Signer</span> <span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      string ak <span class="token operator">=</span> <span class="token string">&quot;&lt;your ak&gt;&quot;</span><span class="token punctuation">;</span>
+      string sk <span class="token operator">=</span> <span class="token string">&quot;&lt;your sk&gt;&quot;</span><span class="token punctuation">;</span>
+      BceClientConfiguration config <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">BceClientConfiguration</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        Credentials <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">DefaultBceCredentials</span> <span class="token punctuation">(</span>ak<span class="token punctuation">,</span> sk<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">;</span>
+
       string result <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
-      <span class="token keyword">if</span> <span class="token punctuation">(</span>policy <span class="token operator">!</span><span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>sts <span class="token operator">!</span><span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        StsClient client <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">StsClient</span> <span class="token punctuation">(</span>config<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        string accessControlList <span class="token operator">=</span> sts<span class="token punctuation">;</span>
+        GetSessionTokenRequest request <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">GetSessionTokenRequest</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          DurationSeconds <span class="token operator">=</span> <span class="token number">60</span> <span class="token operator">*</span> <span class="token number">60</span> <span class="token operator">*</span> <span class="token number">24</span><span class="token punctuation">,</span>
+          AccessControlList <span class="token operator">=</span> accessControlList
+        <span class="token punctuation">}</span><span class="token punctuation">;</span>
+        GetSessionTokenResponse response <span class="token operator">=</span> client<span class="token punctuation">.</span>GetSessionToken <span class="token punctuation">(</span>request<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        result <span class="token operator">=</span> JsonConvert<span class="token punctuation">.</span>SerializeObject <span class="token punctuation">(</span>response<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>policy <span class="token operator">!</span><span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
         string base64 <span class="token operator">=</span> Convert<span class="token punctuation">.</span>ToBase64String <span class="token punctuation">(</span>Encoding<span class="token punctuation">.</span>UTF8<span class="token punctuation">.</span>GetBytes <span class="token punctuation">(</span>policy<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token keyword">var</span> hash <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HMACSHA256</span> <span class="token punctuation">(</span>Encoding<span class="token punctuation">.</span>UTF8<span class="token punctuation">.</span>GetBytes <span class="token punctuation">(</span>sk<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         string signature <span class="token operator">=</span> EncodeHex <span class="token punctuation">(</span>hash<span class="token punctuation">.</span>ComputeHash <span class="token punctuation">(</span>Encoding<span class="token punctuation">.</span>UTF8<span class="token punctuation">.</span>GetBytes <span class="token punctuation">(</span>base64<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
@@ -164,15 +193,18 @@ namespace BaiduCloudEngine<span class="token punctuation">.</span>Controllers
         <span class="token keyword">if</span> <span class="token punctuation">(</span>queries <span class="token operator">!</span><span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
           internalRequest<span class="token punctuation">.</span>Parameters <span class="token operator">=</span> JsonConvert<span class="token punctuation">.</span>DeserializeObject&lt;Dictionary&lt;string<span class="token punctuation">,</span> string<span class="token operator">&gt;</span><span class="token operator">&gt;</span> <span class="token punctuation">(</span>queries<span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token punctuation">}</span>
-        <span class="token keyword">var</span> sign <span class="token operator">=</span> bceV1Signer<span class="token punctuation">.</span>Sign <span class="token punctuation">(</span>internalRequest<span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-        <span class="token keyword">var</span> xbceDate <span class="token operator">=</span> DateUtils<span class="token punctuation">.</span>FormatAlternateIso8601Date <span class="token punctuation">(</span>DateTime<span class="token punctuation">.</span>Now<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        BceV1Signer bceV1Signer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">BceV1Signer</span> <span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        string sign <span class="token operator">=</span> bceV1Signer<span class="token punctuation">.</span>Sign <span class="token punctuation">(</span>internalRequest<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        string xbceDate <span class="token operator">=</span> DateUtils<span class="token punctuation">.</span>FormatAlternateIso8601Date <span class="token punctuation">(</span>DateTime<span class="token punctuation">.</span>Now<span class="token punctuation">)</span><span class="token punctuation">;</span>
         result <span class="token operator">=</span> JsonConvert<span class="token punctuation">.</span>SerializeObject <span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">SignatureResult</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
           statusCode <span class="token operator">=</span> <span class="token number">200</span><span class="token punctuation">,</span>
           signature <span class="token operator">=</span> sign<span class="token punctuation">,</span>
           xbceDate <span class="token operator">=</span> xbceDate<span class="token punctuation">,</span>
         <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
       <span class="token punctuation">}</span>
+
       <span class="token keyword">if</span> <span class="token punctuation">(</span>callback <span class="token operator">!</span><span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
         result <span class="token operator">=</span> callback <span class="token operator">+</span> <span class="token string">&quot;(&quot;</span> <span class="token operator">+</span> result <span class="token operator">+</span> <span class="token string">&quot;)&quot;</span><span class="token punctuation">;</span>
       <span class="token punctuation">}</span>
