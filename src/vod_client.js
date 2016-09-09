@@ -133,6 +133,10 @@ VodClient.prototype._generateMediaId = function (options) {
     return this.buildRequest('POST', null, 'apply', options);
 };
 
+VodClient.prototype._internalCreateMediaResource = function (mediaId, title, description, options) {
+    return this._createMediaResource(mediaId, title, description, options);
+};
+
 VodClient.prototype._createMediaResource = function (mediaId, title, description, options) {
     var params = {title: title};
     if (description) {
