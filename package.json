@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/baidubce/bce-sdk-js.git"
+    "url": "https://github.com/xiushenli/bce-sdk-js"
   },
   "author": "leeight@gmail.com",
   "license": "MIT",
