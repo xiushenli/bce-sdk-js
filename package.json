@@ -21,7 +21,8 @@
     "async": "^1.5.2",
     "debug": "^2.2.0",
     "q": "^1.1.2",
-    "underscore": "^1.7.0"
+    "underscore": "^1.7.0",
+    "node":"^8.0.47"
   },
   "devDependencies": {
     "browserify": "10.2.6",
