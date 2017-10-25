@@ -1,6 +1,6 @@
 {
-  "name": "bce-sdk-my",
-  "version": "0.2.7",
+  "name": "ls-bce-sdk",
+  "version": "0.0.1",
   "description": "Baidu Cloud Engine JavaScript SDK",
   "main": "index.js",
   "directories": {
